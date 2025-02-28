@@ -1,6 +1,5 @@
 use ark_ff::Field;
 
-/// 多変数(マルチリニア)多項式を2^m個の評価値で保持するシンプル実装
 #[derive(Clone, Debug)]
 pub struct MultilinearPolynomial<F: Field> {
     pub z: Vec<F>,
