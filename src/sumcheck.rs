@@ -11,7 +11,7 @@ use crate::params::SumCheckCommitmentSetupParameters;
 use crate::polynomial_to_bytes;
 use crate::Vec;
 
-#[derive(CanonicalSerialize, CanonicalDeserialize)]
+#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
 pub struct SumCheckProof<G: Curve> {
     pub polys: Vec<DensePolynomial<G::Fr>>,
     pub poly_value_at_r: Vec<G::Fr>,
