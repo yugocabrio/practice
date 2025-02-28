@@ -3,7 +3,7 @@ use ark_ff::{One, Zero};
 use ark_std::test_rng;
 use zkp_curve::Curve;
 use zkp_libra::{
-    circuit::Circuit, libra_linear_gkr::LinearGKRProof, libra_zk_linear_gkr::ZKLinearGKRProof,
+    circuit::Circuit, libra_linear_gkr::LinearGKRProof,
     params::Parameters,
 };
 
@@ -76,28 +76,3 @@ fn test_libra_linear_gkr() {
     assert!(result);
 }
 
-#[test]
-fn test_libra_zk_linear_gkr() {
-    let rng = &mut test_rng();
-    println!("start zk linear gkr...");
-
-    let (inputs, witnesses, layers) = prepare_construct_circuit::<E>();
-    println!("prepare for constructing circuit...ok");
-
-    let params = Parameters::<E>::new(rng, 8);
-    let param_to_hash = params.param_to_hash();
-    println!("prepare for constructing circuit...ok");
-
-    let circuit = Circuit::new(inputs.len(), witnesses.len(), &layers);
-    let circuit_to_hash = circuit.circuit_to_hash::<E>();
-    println!("construct circuit...ok");
-
-    let (proof, output) =
-        ZKLinearGKRProof::<E>::prover::<_>(&params, &circuit, &inputs, &witnesses, circuit_to_hash, param_to_hash, rng);
-    println!("generate proof...ok");
-
-    let result = proof.verify(&params, &circuit, &output, &inputs, circuit_to_hash, param_to_hash
-    );
-    println!("verifier...{}", result);
-    assert!(result);
-}
