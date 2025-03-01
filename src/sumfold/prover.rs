@@ -1,26 +1,33 @@
-//! sumfold の "prover" 的な例
-//! G: zkp_curve::Curve
-
 use rand::Rng;
-use zkp_curve::Curve; // あなたの定義
-use ark_ff::{Zero};
+use zkp_curve::Curve;
+use ark_ff::Zero;
 use crate::sumfold::multilinear::MultilinearPolynomial;
 use crate::sumfold::q_poly::build_q_polynomial;
 use crate::sumcheck::SumCheckProof;
 use std::sync::Arc;
 
-/// sumcheck instance
+/// A sumcheck instance containing a function F, a vector of polynomials, and a proof.
 #[derive(Clone)]
 pub struct SumcheckInstance<G: Curve> {
-    /// F: takes slice of G::Fr -> G::Fr
+    /// A function that takes a slice of Scalars and returns a Scalar.
     pub F: Arc<dyn Fn(&[<G as Curve>::Fr]) -> <G as Curve>::Fr + Send + Sync>,
-    /// マルチリニア多項式群
+    /// A vector of multilinear polynomials.
     pub g_vec: Vec<MultilinearPolynomial<<G as Curve>::Fr>>,
-    /// sumcheckの証明
+    /// A proof for the sumcheck protocol.
     pub proof: SumCheckProof<G>,
 }
 
-/// sumfold: ランダムにrho選んで Q(b) 構築
+/// Implements sumfold() following the requested steps:
+/// 1. F = instances[0].F
+/// 2. Ensure all g_vec have the same length.
+/// 3. Define n, t, b, x, etc.
+/// 4. Prepare g_bj from instances.
+/// 5. Prepare f_js from g_bj.
+/// 6. Pick a random rho in [0..n).
+/// 7. Call build_q_polynomial.
+/// 8. Return (instances[rho], q_b, rho).
+///
+/// Output type: (SumcheckInstance<G>, G::Fr, MultilinearPolynomial<G::Fr>)
 pub fn sumfold<G: Curve>(
     instances: Vec<SumcheckInstance<G>>,
 ) -> (
@@ -28,33 +35,33 @@ pub fn sumfold<G: Curve>(
     <G as Curve>::Fr,
     MultilinearPolynomial<<G as Curve>::Fr>,
 ) {
-    let n = instances.len();
-    let mut rng = rand::thread_rng();
-    // rand=0.7 => rng.gen_range(low, high)
-    let rho_int = rng.gen_range(0, n);
-
-    // step1
+    // Step 1: F = instances[0].F
     let f_cloned = instances[0].F.clone();
 
-    // step2
+    // Step 2: Ensure all g_vec have the same length
     let first_len = instances[0].g_vec.len();
     for inst in &instances {
-        assert_eq!(inst.g_vec.len(), first_len);
+        assert_eq!(
+            inst.g_vec.len(),
+            first_len,
+            "All instances must have the same number of polynomials in g_vec"
+        );
     }
 
-    // step3
+    // Step 3: Define n, t, b, x, etc.
+    let n = instances.len();
     let t = instances[0].g_vec.len();
     let x = instances[0].g_vec[0].z.len();
     let nu = (n as f64).log2() as usize;
     let l  = (x as f64).log2() as usize;
 
-    // step4
+    // Step 4: Prepare g_bj from instances
     let mut g_bj = Vec::with_capacity(n);
     for inst in &instances {
         g_bj.push(inst.g_vec.clone());
     }
 
-    // step5
+    // Step 5: Prepare f_js from g_bj
     let size = 1 << (nu + l);
     let mut f_js = Vec::with_capacity(t);
     for j in 0..t {
@@ -68,81 +75,86 @@ pub fn sumfold<G: Curve>(
         f_js.push(MultilinearPolynomial::new(f_eval));
     }
 
-    // step7
+    // Step 6: Pick a random rho in [0..n)
+    let mut rng = rand::thread_rng();
+    let rho_int = rng.gen_range(0, n);
+    let rho_field = <G as Curve>::Fr::from(rho_int as u64);
+
+    // Step 7: Call build_q_polynomial
     let q_b = build_q_polynomial(&f_js, &*f_cloned, rho_int, nu, l);
 
-    // step8
-    let rho_field = <G as Curve>::Fr::from(rho_int as u64);
-    (instances[rho_int].clone(), rho_field, q_b)
+    // Step 8: Return (instances[rho_int], rho_field, q_b)
+    (
+        instances[rho_int].clone(),
+        rho_field,
+        q_b
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ark_ff::{Field, PrimeField, UniformRand, Zero, One};
+    use ark_ff::{Field, PrimeField, UniformRand, Zero};
     use rand::rngs::StdRng;
     use rand::SeedableRng;
     use std::sync::Arc;
 
-    // PairingEngine (ark) + zkp_curve::Curve
     use ark_bls12_381::Bls12_381 as E;
-    // sumfold
     use crate::sumfold::multilinear::MultilinearPolynomial;
     use crate::sumcheck::SumCheckProof;
 
     #[test]
     fn test_sumfold() {
-        type FE = <E as Curve>::Fr; // 型エイリアス: <Bls12_381 as zkp_curve::Curve>::Fr
-        // (Bls12_381 は PairingEngine, かつ zkp_curve::Curve のimplあり)
+        type FE = <E as Curve>::Fr;
 
         let n = 2;
         let t = 2;
         let x = 4;
 
-        // F: product
+        // Define F as the product function.
         let f_arc: Arc<dyn Fn(&[FE]) -> FE + Send + Sync> =
-            Arc::new(|vals| vals.iter().product::<FE>());
+            Arc::new(|vals: &[FE]| vals.iter().product());
 
         let mut rng = StdRng::seed_from_u64(12345);
         let mut instances: Vec<SumcheckInstance<E>> = Vec::with_capacity(n);
 
+        // Create sample instances
         for _ in 0..n {
-            // g_vec
             let mut g_vec = Vec::with_capacity(t);
             for _ in 0..t {
                 let evals = (0..x).map(|_| FE::rand(&mut rng)).collect();
                 g_vec.push(MultilinearPolynomial::new(evals));
             }
 
-            // sumcheck proof dummy
+            // Dummy proof
             let proof = SumCheckProof::<E> {
                 polys: Vec::new(),
                 poly_value_at_r: Vec::new(),
             };
 
-            let inst = SumcheckInstance {
+            instances.push(SumcheckInstance {
                 F: f_arc.clone(),
                 g_vec,
                 proof,
-            };
-            instances.push(inst);
+            });
         }
 
-        let (chosen, rho_f, q_b) = sumfold::<E>(instances);
+        // Run sumfold
+        let (chosen_inst, rho_f, q_b) = sumfold::<E>(instances);
 
-        // sum-of-products
+        // Compute T = sum_{x in [0, x)} F(g_vec[0](x), g_vec[1](x))
         let mut T = FE::zero();
         for i in 0..x {
-            T += (chosen.F)(&[
-                chosen.g_vec[0].z[i],
-                chosen.g_vec[1].z[i],
+            T += (chosen_inst.F)(&[
+                chosen_inst.g_vec[0].z[i],
+                chosen_inst.g_vec[1].z[i],
             ]);
         }
 
-        // into_repr() => import ark_ff::PrimeField
-        let rho_u = rho_f.into_repr().as_ref()[0] as usize;  
-        //  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `as_ref()` で BigInt sliceを取り、[0]番目
+        // Convert rho_f back to usize
+        let rho_u = rho_f.into_repr().as_ref()[0] as usize;
 
+        // Check that q_b.z[rho_u] == T
         assert_eq!(q_b.z[rho_u], T, "Q(rho) must match sum-of-products");
     }
 }
