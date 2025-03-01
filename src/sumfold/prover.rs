@@ -35,7 +35,7 @@ pub fn sumfold<G: Curve>(
     <G as Curve>::Fr,
     MultilinearPolynomial<<G as Curve>::Fr>,
 ) {
-    // Step 1: F = instances[0].F
+    // Step 1: F = instances[0].F (not strictly used below, but we store it)
     let f_cloned = instances[0].F.clone();
 
     // Step 2: Ensure all g_vec have the same length
@@ -48,7 +48,9 @@ pub fn sumfold<G: Curve>(
         );
     }
 
-    // Step 3: Define n, t, b, x, etc.
+    // Step 3: define n, t, b, x, etc.
+    // Here we only define n = instances.len(), t = g_vec.len() for demonstration.
+    // b,x typically come from the dimension of the polynomials, but we skip that detail.
     let n = instances.len();
     let t = instances[0].g_vec.len();
     let x = instances[0].g_vec[0].z.len();
@@ -64,6 +66,8 @@ pub fn sumfold<G: Curve>(
     // Step 5: Prepare f_js from g_bj
     let size = 1 << (nu + l);
     let mut f_js = Vec::with_capacity(t);
+    // The index is computed as (b_val << l) + x_val,
+    // because the b-bits are the top bits and x-bits are the bottom bits.
     for j in 0..t {
         let mut f_eval = vec![<G as Curve>::Fr::zero(); size];
         for b_val in 0..n {
@@ -75,15 +79,20 @@ pub fn sumfold<G: Curve>(
         f_js.push(MultilinearPolynomial::new(f_eval));
     }
 
-    // Step 6: Pick a random rho in [0..n)
+    // Step 6: pick random rho in [0..n)
+    // let rho_int = n % 2;
     let mut rng = rand::thread_rng();
     let rho_int = rng.gen_range(0, n);
     let rho_field = <G as Curve>::Fr::from(rho_int as u64);
 
-    // Step 7: Call build_q_polynomial
+    // Step 7: call build_q_polynomial
+    // For demonstration, we hardcode nu=1, l=1 or something suitable.
+    // In practice, you should derive (nu, l) from the polynomial dimension.
     let q_b = build_q_polynomial(&f_js, &*f_cloned, rho_int, nu, l);
 
-    // Step 8: Return (instances[rho_int], rho_field, q_b)
+    // Step 8: return (instances[rho], q_b, rho)
+    // But your requested type is (SumcheckInstance<Scalar>, Scalar, MultilinearPolynomial<Scalar>).
+    // So we put (instances[rho_int], rho_field, q_b).
     (
         instances[rho_int].clone(),
         rho_field,
