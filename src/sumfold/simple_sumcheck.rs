@@ -1,7 +1,6 @@
 use ark_ff::Field;
 use crate::sumfold::multilinear::MultilinearPolynomial;
 
-/// シンプルな Sumcheck 証明オブジェクト
 #[derive(Clone)]
 pub struct SimpleSumcheckProof<F: Field> {
     /// ラウンドごとにやりとりする1変数多項式
@@ -125,7 +124,7 @@ mod tests {
     #[test]
     fn test_simple_sumcheck_correct() {
         let l = 10;
-        let mut poly = build_small_poly::<Fr>(l);
+        let poly = build_small_poly::<Fr>(l);
 
         let claimed_sum: Fr = poly.z.iter().copied().sum();
 
@@ -138,7 +137,7 @@ mod tests {
     #[test]
     fn test_simple_sumcheck_incorrect_claim() {
         let l = 10;
-        let mut poly = build_small_poly::<Fr>(l);
+        let poly = build_small_poly::<Fr>(l);
 
         let real_sum: Fr = poly.z.iter().copied().sum();
 
