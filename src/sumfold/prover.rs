@@ -1,9 +1,9 @@
+use ark_ff::{Zero, PrimeField};
 use rand::Rng;
 use zkp_curve::Curve;
-use ark_ff::Zero;
 use crate::sumfold::multilinear::MultilinearPolynomial;
 use crate::sumfold::q_poly::build_q_polynomial;
-use crate::sumcheck::SumCheckProof;
+use crate::sumfold::simple_sumcheck::SimpleSumcheckProof;
 use std::sync::Arc;
 
 /// A sumcheck instance containing a function F, a vector of polynomials, and a proof.
@@ -14,7 +14,7 @@ pub struct SumcheckInstance<G: Curve> {
     /// A vector of multilinear polynomials.
     pub g_vec: Vec<MultilinearPolynomial<<G as Curve>::Fr>>,
     /// A proof for the sumcheck protocol.
-    pub proof: SumCheckProof<G>,
+    pub proof: SimpleSumcheckProof<<G as Curve>::Fr>,
 }
 
 /// Implements sumfold() following the requested steps:
@@ -100,3 +100,85 @@ pub fn sumfold<G: Curve>(
     )
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ark_bls12_381::{Bls12_381 as E, Fr as BLSFr};
+    use ark_ff::{Field,Zero};
+    use std::sync::Arc;
+    use crate::sumfold::simple_sumcheck::SimpleSumcheck;
+
+    fn build_small_poly(l: usize) -> MultilinearPolynomial<BLSFr> {
+        let size= 1<<l;
+        let mut z= Vec::with_capacity(size);
+        let mut val= BLSFr::zero();
+        for _ in 0..size {
+            val += BLSFr::from(1u64);
+            z.push(val);
+        }
+        MultilinearPolynomial::new(z)
+    }
+
+    fn build_product_poly(
+        g0: &MultilinearPolynomial<BLSFr>,
+        g1: &MultilinearPolynomial<BLSFr>
+    ) -> MultilinearPolynomial<BLSFr>
+    {
+        let size= g0.len();
+        assert_eq!(size, g1.len());
+        let mut z= g0.z.clone();
+        for i in 0..size {
+            z[i] *= g1.z[i];
+        }
+        MultilinearPolynomial::new(z)
+    }
+
+    #[test]
+    fn test_sumfold_with_naive_sumcheck() {
+        // sumcheckインスタンス
+        let n=2;
+        let l=2; 
+        let size= 1<<l;
+
+        let f_arc: Arc<dyn Fn(&[BLSFr])->BLSFr + Send + Sync>
+            = Arc::new(|vals: &[BLSFr]| vals.iter().product());
+
+        let mut instances= Vec::with_capacity(n);
+
+        for _ in 0..n {
+            let g0= build_small_poly(l);
+            let g1= build_small_poly(l);
+
+            let mut prod_poly= build_product_poly(&g0,&g1);
+            let mut real_sum= BLSFr::zero();
+            for i in 0..size {
+                real_sum += g0.z[i]* g1.z[i];
+            }
+
+            // simple sumcheckでΣg0*g1=real_sumを証明する
+            let sc_proof= SimpleSumcheck::prove(&mut prod_poly, real_sum);
+            let instance= SumcheckInstance{
+                F: f_arc.clone(),
+                g_vec: vec![g0,g1],
+                proof: sc_proof,
+            };
+            instances.push(instance);
+        }
+
+        let (chosen_inst, rho_field, q_b)= sumfold::<E>(instances);
+
+        let size= chosen_inst.g_vec[0].len();
+        let mut T= BLSFr::zero();
+        for i in 0..size {
+            let val= (chosen_inst.F)(&[
+                chosen_inst.g_vec[0].z[i],
+                chosen_inst.g_vec[1].z[i]
+            ]);
+            T += val;
+        }
+
+        let rho_usize = (rho_field.into_repr().as_ref()[0]) as usize;
+        let qb_rho= q_b.z[rho_usize];
+        assert_eq!(qb_rho, T);
+    }
+}
