@@ -152,34 +152,42 @@ mod tests {
             // store
             let inst = SumfoldInstance {
                 f_func: f_arc.clone(),
-                g_vec: vec![g0,g1],
+                g_vec: vec![g0, g1],
             };
             instances.push(inst);
         }
 
         // call sumfold
         let (chosen_inst, rho_field, q_b) = sumfold::<E>(instances);
-
-        // check that q_b(rho) = sum_x F( [g0(x), g1(x)] )
+    
+        // 1) compute the actual sum_x F(g0(x), g1(x)) for chosen_inst
         let size = chosen_inst.g_vec[0].len();
         let mut t_val = BLSFr::zero();
         for i in 0..size {
             let val = (chosen_inst.f_func)(&[
                 chosen_inst.g_vec[0].z[i],
-                chosen_inst.g_vec[1].z[i]
+                chosen_inst.g_vec[1].z[i],
             ]);
             t_val += val;
         }
+
+        // 2) check Q(rho) == that sum
         let rho_usize = (rho_field.into_repr().as_ref()[0]) as usize;
         let qb_rho = q_b.z[rho_usize];
-        assert_eq!(qb_rho, t_val, "q_b(rho) must match sum_x of F(g_vec)");
-
+        assert_eq!(
+            qb_rho, t_val,
+            "q_b(rho) must match sum_x of F(g_vec)"
+        );
+    
+        // 3) naive sumcheck of Q(b):
         let total_sum: BLSFr = q_b.z.iter().copied().sum();
-        let dimension_nu_l = (q_b.z.len() as f64).log2() as usize; 
-
+        let dimension_nu_l = (q_b.z.len() as f64).log2() as usize;
+    
         let mut q_b_clone = q_b.clone();
-        let sc_proof: SimpleSumcheckProof<BLSFr> = SimpleSumcheck::prove(&mut q_b_clone, total_sum);
+        let sc_proof: SimpleSumcheckProof<BLSFr> =
+            SimpleSumcheck::prove(&mut q_b_clone, total_sum);
         let ok = SimpleSumcheck::verify(&sc_proof, total_sum, dimension_nu_l);
         assert!(ok, "Naive sumcheck on q_b should pass as well");
     }
+    
 }
