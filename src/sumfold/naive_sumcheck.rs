@@ -101,3 +101,53 @@ impl SimpleSumcheck {
         proof.final_value == next_claim
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ark_ff::{Field, One, Zero};
+    use ark_bls12_381::Fr;
+    use crate::sumfold::multilinear::MultilinearPolynomial;
+
+    // 評価点の計算
+    fn build_small_poly<F: Field>(l: usize) -> MultilinearPolynomial<F> {
+        let size = 1 << l;
+        let mut z = Vec::with_capacity(size);
+
+        let mut val = F::zero();
+        for _ in 0..size {
+            val += F::one();
+            z.push(val);
+        }
+        MultilinearPolynomial::new(z)
+    }
+
+    #[test]
+    fn test_simple_sumcheck_correct() {
+        let l = 10;
+        let mut poly = build_small_poly::<Fr>(l);
+
+        let claimed_sum: Fr = poly.z.iter().copied().sum();
+
+        let proof = SimpleSumcheck::prove(&mut poly.clone(), claimed_sum);
+
+        let ok = SimpleSumcheck::verify(&proof, claimed_sum, l);
+        assert!(ok, "sumcheck pass");
+    }
+
+    #[test]
+    fn test_simple_sumcheck_incorrect_claim() {
+        let l = 10;
+        let mut poly = build_small_poly::<Fr>(l);
+
+        let real_sum: Fr = poly.z.iter().copied().sum();
+
+        // sumを水増し
+        let claimed_sum = real_sum + Fr::one();
+
+        let proof = SimpleSumcheck::prove(&mut poly.clone(), claimed_sum);
+
+        let ok = SimpleSumcheck::verify(&proof, claimed_sum, l);
+        assert!(!ok, "sumcheck fail");
+    }
+}
