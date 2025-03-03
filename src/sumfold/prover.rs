@@ -51,9 +51,14 @@ pub fn sumfold<G: Curve>(
     let n = instances.len();
     let t = instances[0].g_vec.len();
     let x = instances[0].g_vec[0].z.len();
+
+    // Make sure n and x are powers of 2
+    let n_pow2 = n.next_power_of_two();
+    let x_pow2 = x.next_power_of_two();
+
     // nu, l for interpolation
-    let nu = (n as f64).log2() as usize;
-    let l  = (x as f64).log2() as usize;
+    let nu = (n_pow2 as f64).log2() as usize;
+    let l  = (x_pow2 as f64).log2() as usize;
 
     // Step 4: Prepare g_bj from instances
     let mut g_bj = Vec::with_capacity(n);
@@ -70,7 +75,9 @@ pub fn sumfold<G: Curve>(
         for b_val in 0..n {
             for x_val in 0..x {
                 let idx = (b_val << l) + x_val;
-                f_eval[idx] = g_bj[b_val][j].z[x_val];
+                if idx < size {
+                    f_eval[idx] = g_bj[b_val][j].z[x_val];
+                }
             }
         }
         f_js.push(MultilinearPolynomial::new(f_eval));
