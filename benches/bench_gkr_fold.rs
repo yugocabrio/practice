@@ -177,27 +177,69 @@ fn main() {
     // Run benchmarks for different values of n
     let ns = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144];
     let d = 32; // Fixed number of layers
+    let num_runs = 10; // Number of runs for each n
 
     for &n in &ns {
         println!("\n=== Benchmarking with n={} ===", n);
 
-        // Run the benchmark
-        let result = run_benchmark(n, d);
+        // Variables to store accumulated results
+        let mut total_gkrfold_time_ms = 0.0;
+        let mut total_gkrfold_memory_mb = 0.0;
+        let mut total_folded_proof_size_kb = 0.0;
+        let mut total_folded_proof_verify_time_ms = 0.0;
+        let mut total_single_prove_time_ms = 0.0;
+        let mut total_single_proof_size_kb = 0.0;
+        let mut total_single_proof_verify_time_ms = 0.0;
 
-    // Write the result to the CSV file
-    writeln!(
-        file,
-        "{},{},{},{},{},{},{},{}",
-        result.0, // n
-        result.1, // gkrfold_time_ms
-        result.2, // gkrfold_memory_mb
-        result.3, // folded_proof_size_kb
-        result.4, // folded_proof_verify_time_ms
-        result.5, // single_prove_time_ms
-        result.6, // single_proof_size_kb
-        result.7  // single_proof_verify_time_ms
-    )
-    .unwrap();
+        // Run the benchmark multiple times
+        for run in 1..=num_runs {
+            println!("  Run {}/{}", run, num_runs);
+
+            // Run the benchmark
+            let result = run_benchmark(n, d);
+
+            // Accumulate results
+            total_gkrfold_time_ms += result.1;
+            total_gkrfold_memory_mb += result.2;
+            total_folded_proof_size_kb += result.3;
+            total_folded_proof_verify_time_ms += result.4;
+            total_single_prove_time_ms += result.5;
+            total_single_proof_size_kb += result.6;
+            total_single_proof_verify_time_ms += result.7;
+        }
+
+        // Calculate averages
+        let avg_gkrfold_time_ms = total_gkrfold_time_ms / (num_runs as f64);
+        let avg_gkrfold_memory_mb = total_gkrfold_memory_mb / (num_runs as f64);
+        let avg_folded_proof_size_kb = total_folded_proof_size_kb / (num_runs as f64);
+        let avg_folded_proof_verify_time_ms = total_folded_proof_verify_time_ms / (num_runs as f64);
+        let avg_single_prove_time_ms = total_single_prove_time_ms / (num_runs as f64);
+        let avg_single_proof_size_kb = total_single_proof_size_kb / (num_runs as f64);
+        let avg_single_proof_verify_time_ms = total_single_proof_verify_time_ms / (num_runs as f64);
+
+        println!("  Average results after {} runs:", num_runs);
+        println!("  GKRFold time: {:.2} ms", avg_gkrfold_time_ms);
+        println!("  GKRFold memory usage: {:.2} MB", avg_gkrfold_memory_mb);
+        println!("  Folded proof size: {:.2} KB", avg_folded_proof_size_kb);
+        println!("  Folded proof verify time: {:.2} ms", avg_folded_proof_verify_time_ms);
+        println!("  Single circuit prove time: {:.2} ms", avg_single_prove_time_ms);
+        println!("  Single proof size: {:.2} KB", avg_single_proof_size_kb);
+        println!("  Single proof verify time: {:.2} ms", avg_single_proof_verify_time_ms);
+
+        // Write the average result to the CSV file
+        writeln!(
+            file,
+            "{},{},{},{},{},{},{},{}",
+            n, // n
+            avg_gkrfold_time_ms,
+            avg_gkrfold_memory_mb,
+            avg_folded_proof_size_kb,
+            avg_folded_proof_verify_time_ms,
+            avg_single_prove_time_ms,
+            avg_single_proof_size_kb,
+            avg_single_proof_verify_time_ms
+        )
+        .unwrap();
     }
 
     println!("\nBenchmark completed. Results saved to gkrfold_benchmark_results.csv");
