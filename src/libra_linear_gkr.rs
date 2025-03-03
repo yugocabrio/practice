@@ -1,6 +1,7 @@
 use ark_ff::{to_bytes, One, Zero};
 use ark_poly::Polynomial;
 use merlin::Transcript;
+use ark_serialize::*;
 use zkp_curve::Curve;
 
 use crate::circuit::{Circuit, Gate};
@@ -9,11 +10,13 @@ use crate::polynomial_to_bytes;
 use crate::sumcheck::SumCheckProof;
 use crate::Vec;
 
+#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
 pub struct LayerProof<G: Curve> {
     pub proof_phase_one: SumCheckProof<G>,
     pub proof_phase_two: SumCheckProof<G>,
 }
 
+#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
 pub struct LinearGKRProof<G: Curve> {
     pub proofs: Vec<LayerProof<G>>,
 }
@@ -27,7 +30,7 @@ impl<G: Curve> LinearGKRProof<G> {
     ) -> (Self, Vec<G::Fr>) {
         let mut transcript = Transcript::new(b"libra - linear gkr");
         transcript.append_message(b"circuit_to_hash", &to_bytes!(circuit_to_hash).unwrap());
-        
+
         let circuit_evals = circuit.evaluate::<G>(inputs, witnesses).unwrap();
         transcript.append_message(b"input", &to_bytes!(circuit_evals[0]).unwrap());
         transcript.append_message(
@@ -116,8 +119,8 @@ impl<G: Curve> LinearGKRProof<G> {
     pub fn verify(&self, circuit: &Circuit, outputs: &Vec<G::Fr>, inputs: &Vec<G::Fr>, circuit_to_hash: G::Fr) -> bool {
         let mut transcript = Transcript::new(b"libra - linear gkr");
         transcript.append_message(b"circuit_to_hash", &to_bytes!(circuit_to_hash).unwrap());
-        
-        
+
+
         transcript.append_message(b"input", &to_bytes!(inputs).unwrap());
         transcript.append_message(b"output", &to_bytes!(outputs).unwrap());
         let mut alpha = G::Fr::one();

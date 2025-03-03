@@ -165,10 +165,52 @@ fn test_gkrfold_multiple_circuits() {
     println!("All multiple circuit tests completed successfully");
 }
 
-/// Helper function to test GKRFold with N circuits
-/// This uses the simple circuit creation functions we already have
+/// Create a circuit with d layers
+fn prepare_circuit_with_layers(d: usize) -> (Vec<Fr>, Vec<Fr>, Vec<Vec<(u8, usize, usize)>>) {
+    // Create inputs and witnesses
+    let inputs = vec![
+        Fr::one() + &Fr::one(),              // 2
+        Fr::one() + &Fr::one() + &Fr::one(), // 3
+    ];
+
+    let witnesses = vec![
+        Fr::one() + &Fr::one() + &Fr::one(),              // 3
+        Fr::one() + &Fr::one() + &Fr::one() + &Fr::one(), // 4
+    ];
+
+    // Create layers for the circuit
+    let mut layers = Vec::with_capacity(d);
+
+    // First layer: Multiplication gates
+    let mut layer = Vec::new();
+    layer.push((1, 0, 2)); // witness0 * input0 = 3 * 2 = 6
+    layer.push((1, 1, 3)); // witness1 * input1 = 4 * 3 = 12
+    layers.push(layer);
+
+    // Second layer: Addition gate
+    let mut layer = Vec::new();
+    layer.push((0, 0, 1)); // 6 + 12 = 18
+    layers.push(layer);
+
+    // Create remaining layers (if d > 2)
+    for j in 2..d {
+        let mut layer = Vec::new();
+        if j % 2 == 0 {
+            // Multiplication layer
+            layer.push((1, 0, 0)); // Square the result
+        } else {
+            // Addition layer
+            layer.push((0, 0, 0)); // Add the result with itself (doubling)
+        }
+        layers.push(layer);
+    }
+
+    (inputs, witnesses, layers)
+}
+
+/// Helper function to test GKRFold with N circuits, each with 8 layers
 fn test_gkrfold_with_n_circuits(n: usize) {
-    println!("Testing GKRFold with {} circuits...", n);
+    println!("Testing GKRFold with {} circuits, each with 8 layers...", n);
 
     let start = Instant::now();
 
@@ -178,29 +220,16 @@ fn test_gkrfold_with_n_circuits(n: usize) {
     let mut all_witnesses = Vec::with_capacity(n);
     let mut all_circuit_to_hash = Vec::with_capacity(n);
 
-    // Create n circuits by alternating between the two circuit types we already have
-    for i in 0..n {
-        if i % 2 == 0 {
-            // Even index: use simple circuit
-            let (inputs, witnesses, layers) = prepare_simple_circuit();
-            let circuit = Circuit::new(inputs.len(), witnesses.len(), &layers);
-            let circuit_to_hash = circuit.circuit_to_hash::<E>();
+    // Create n circuits with 8 layers each
+    for _ in 0..n {
+        let (inputs, witnesses, layers) = prepare_circuit_with_layers(8);
+        let circuit = Circuit::new(inputs.len(), witnesses.len(), &layers);
+        let circuit_to_hash = circuit.circuit_to_hash::<E>();
 
-            circuits.push(circuit);
-            all_inputs.push(inputs);
-            all_witnesses.push(witnesses);
-            all_circuit_to_hash.push(circuit_to_hash);
-        } else {
-            // Odd index: use another circuit
-            let (inputs, witnesses, layers) = prepare_another_circuit();
-            let circuit = Circuit::new(inputs.len(), witnesses.len(), &layers);
-            let circuit_to_hash = circuit.circuit_to_hash::<E>();
-
-            circuits.push(circuit);
-            all_inputs.push(inputs);
-            all_witnesses.push(witnesses);
-            all_circuit_to_hash.push(circuit_to_hash);
-        }
+        circuits.push(circuit);
+        all_inputs.push(inputs);
+        all_witnesses.push(witnesses);
+        all_circuit_to_hash.push(circuit_to_hash);
     }
 
     println!("Generated {} circuits in {:?}", n, start.elapsed());
