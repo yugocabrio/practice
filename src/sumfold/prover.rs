@@ -184,10 +184,10 @@ mod tests {
         let mut q_b_clone = q_b.clone();
 
         let mut transcript = Transcript::new(b"test_sumcheck");
-        let (proof, _challenges)= SumCheckProof::<E>::simple_prover(&mut q_b_clone, total_sum, &mut transcript);
+        let (proof, _challenges)= SumCheckProof::<E>::prove(&mut q_b_clone, total_sum, &mut transcript);
 
         let mut verify_transcript = Transcript::new(b"test_sumcheck");
-        let ok = proof.simple_verify(total_sum, &mut verify_transcript);
+        let ok = proof.verify(total_sum, &mut verify_transcript);
         assert!(ok, "Naive sumcheck on q_b should pass as well");
     }
 

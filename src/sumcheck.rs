@@ -175,7 +175,7 @@ impl<G: Curve> SumCheckProof<G> {
         (proof, rv)
     }
 
-    pub fn simple_prover(
+    pub fn prove(
         poly: &mut MultilinearPolynomial<<G as Curve>::Fr>,
         claimed_sum: <G as Curve>::Fr,
         transcript: &mut Transcript,
@@ -233,7 +233,7 @@ impl<G: Curve> SumCheckProof<G> {
         (proof, r_challenges)
     }
 
-    pub fn simple_verify(
+    pub fn verify(
         &self,
         claimed_sum: G::Fr,
         transcript: &mut Transcript,
@@ -307,7 +307,7 @@ mod tests {
 
         // SumCheckProofのsimple_proverを呼び出す
         let mut transcript = Transcript::new(b"test_sumcheck");
-        let (proof, _challenges) = SumCheckProof::<Bls12_381>::simple_prover(
+        let (proof, _challenges) = SumCheckProof::<Bls12_381>::prove(
             &mut poly.clone(),
             claimed_sum,
             &mut transcript,
@@ -315,7 +315,7 @@ mod tests {
 
         // 検証
         let mut verify_transcript = Transcript::new(b"test_sumcheck");
-        let ok = proof.simple_verify(claimed_sum, &mut verify_transcript);
+        let ok = proof.verify(claimed_sum, &mut verify_transcript);
         assert!(ok, "sumcheck pass");
     }
 
@@ -331,7 +331,7 @@ mod tests {
 
         // SumCheckProofのsimple_proverを呼び出す
         let mut transcript = Transcript::new(b"test_sumcheck");
-        let (proof, _challenges) = SumCheckProof::<Bls12_381>::simple_prover(
+        let (proof, _challenges) = SumCheckProof::<Bls12_381>::prove(
             &mut poly.clone(),
             claimed_sum,
             &mut transcript,
@@ -339,7 +339,7 @@ mod tests {
 
         // 検証
         let mut verify_transcript = Transcript::new(b"test_sumcheck");
-        let ok = proof.simple_verify(claimed_sum, &mut verify_transcript);
+        let ok = proof.verify(claimed_sum, &mut verify_transcript);
         assert!(!ok, "sumcheck fail");
     }
 }
