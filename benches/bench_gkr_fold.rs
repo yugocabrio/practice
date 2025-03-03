@@ -159,9 +159,9 @@ fn run_benchmark(n: usize, d: usize) -> (
         gkrfold_memory_mb,
         folded_proof_size_kb,
         folded_proof_verify_time_ms,
-        single_prove_time_ms,
-        single_proof_size_kb,
-        single_proof_verify_time_ms,
+        single_prove_time_ms * n as f64,
+        single_proof_size_kb * n as f64,
+        single_proof_verify_time_ms * n as f64,
     )
 }
 
@@ -170,12 +170,12 @@ fn main() {
     let mut file = File::create("gkrfold_benchmark_results.csv").unwrap();
     writeln!(
         file,
-        "n,gkrfold_time_ms,gkrfold_memory_mb,folded_proof_size_kb,folded_proof_verify_time_ms,single_prove_time_ms,single_proof_size_kb,single_proof_verify_time_ms"
+        "n,gkrfold_time_ms,gkrfold_memory_mb,folded_proof_size_kb,gkrfold_verify_time_ms,gkr_prove_time_ms,gkr_proof_size_kb,gkr_verify_time_ms"
     )
     .unwrap();
 
     // Run benchmarks for different values of n
-    let ns = [2, 4, 8, 16, 32, 64];
+    let ns = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144];
     let d = 32; // Fixed number of layers
 
     for &n in &ns {
