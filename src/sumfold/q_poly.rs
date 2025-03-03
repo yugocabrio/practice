@@ -1,4 +1,4 @@
-use ark_ff::{Field, One, Zero};
+use ark_ff::Field;
 use crate::sumfold::eq::EqPolynomial;
 use crate::sumfold::fj_poly::build_bx_point;
 use crate::sumfold::multilinear::MultilinearPolynomial;
@@ -75,19 +75,10 @@ pub fn build_q_polynomial<F: Field>(
     MultilinearPolynomial::new(q_evals)
 }
 
-/// a simple product F
-pub fn product_F<F: Field>(vals:&[F])->F{
-    let mut acc=F::one();
-    for &v in vals {
-        acc*=v;
-    }
-    acc
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ark_ff::{Field, UniformRand};
+    use ark_ff::{UniformRand, One, Zero};
     use ark_bls12_381::Fr as FF;
     use crate::sumfold::multilinear::MultilinearPolynomial;
     use rand::rngs::StdRng;
@@ -99,12 +90,19 @@ mod tests {
         test_build_q_polynomial_simple(8,4,2);
     }
 
+    pub fn product_f<F: Field>(vals:&[F])->F{
+        let mut acc=F::one();
+        for &v in vals {
+            acc*=v;
+        }
+        acc
+    }
+
     fn test_build_q_polynomial_simple(n:usize,x:usize,t:usize){
         let nu=(n as f64).log2() as usize;
         let l =(x as f64).log2() as usize;
         let mut rng=StdRng::seed_from_u64(111);
 
-        
         let mut g_bj=Vec::with_capacity(n);
         for _ in 0..n {
             let mut polys_b=Vec::with_capacity(t);
@@ -132,7 +130,7 @@ mod tests {
         let random_u64=rng.next_u64();
         let rho=(random_u64 as usize)%n;
 
-        let Q= build_q_polynomial(&f_js,&product_F::<FF>,rho,nu,l);
+        let Q= build_q_polynomial(&f_js,&product_f::<FF>,rho,nu,l);
         let q_r_b= Q.z[rho];
 
         // check

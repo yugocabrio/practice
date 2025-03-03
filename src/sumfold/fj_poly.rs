@@ -1,4 +1,4 @@
-use ark_ff::{Field, One, Zero};
+use ark_ff::Field;
 use crate::sumfold::multilinear::MultilinearPolynomial;
 
 /// Given a set of polynomials for the j-th index:
@@ -100,6 +100,7 @@ mod tests {
     fn test_build_fj() {
         test_build_fj_polynomial(2,2);
         test_build_fj_polynomial(4,2);
+        test_build_fj_polynomial(8,2);
     }
 
     fn test_build_fj_polynomial(n:usize, x:usize){

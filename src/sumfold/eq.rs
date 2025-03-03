@@ -32,7 +32,7 @@ impl<F: Field> EqPolynomial<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ark_ff::{One, Zero, Field};
+    use ark_ff::{One, Zero};
     use ark_bls12_381::Fr as F;
 
     #[test]

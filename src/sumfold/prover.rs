@@ -1,4 +1,4 @@
-use ark_ff::{Zero, PrimeField};
+use ark_ff::Zero;
 use rand::Rng;
 use zkp_curve::Curve;
 use std::sync::Arc;
@@ -98,11 +98,11 @@ mod tests {
     use super::*;
     use std::sync::Arc;
 
-    use rand::Rng;
     use ark_bls12_381::{Bls12_381 as E, Fr as BLSFr};
-    use ark_ff::{Field, PrimeField, Zero};
+    use ark_ff::{PrimeField, Zero};
+    use merlin::Transcript;
     use crate::sumfold::multilinear::MultilinearPolynomial;
-    use crate::sumfold::simple_sumcheck::{SimpleSumcheck, SimpleSumcheckProof};
+    use crate::sumcheck::SumCheckProof;
 
     /// small helper: build a multilinear poly of dimension l => size=2^l
     fn build_small_poly(l: usize) -> MultilinearPolynomial<BLSFr> {
@@ -117,19 +117,19 @@ mod tests {
     }
 
     /// for demonstration: compute product poly
-    fn build_product_poly(
-        g0: &MultilinearPolynomial<BLSFr>,
-        g1: &MultilinearPolynomial<BLSFr>,
-    ) -> MultilinearPolynomial<BLSFr>
-    {
-        assert_eq!(g0.len(), g1.len());
-        let size = g0.len();
-        let mut z = g0.z.clone();
-        for i in 0..size {
-            z[i] *= g1.z[i];
-        }
-        MultilinearPolynomial::new(z)
-    }
+    // fn build_product_poly(
+    //     g0: &MultilinearPolynomial<BLSFr>,
+    //     g1: &MultilinearPolynomial<BLSFr>,
+    // ) -> MultilinearPolynomial<BLSFr>
+    // {
+    //     assert_eq!(g0.len(), g1.len());
+    //     let size = g0.len();
+    //     let mut z = g0.z.clone();
+    //     for i in 0..size {
+    //         z[i] *= g1.z[i];
+    //     }
+    //     MultilinearPolynomial::new(z)
+    // }
 
     /// A basic test that uses sumfold to pick one instance's polynomial, build Q(b),
     /// and check Q(rho)= sum_x [F(g0(x), g1(x))].
@@ -137,7 +137,6 @@ mod tests {
     fn test_sumfold() {
         let n = 2;
         let l = 2;
-        let size = 1<<l;
 
         // define F as product
         let f_arc: Arc<dyn Fn(&[BLSFr])->BLSFr + Send + Sync> =
@@ -159,7 +158,7 @@ mod tests {
 
         // call sumfold
         let (chosen_inst, rho_field, q_b) = sumfold::<E>(instances);
-    
+
         // 1) compute the actual sum_x F(g0(x), g1(x)) for chosen_inst
         let size = chosen_inst.g_vec[0].len();
         let mut t_val = BLSFr::zero();
@@ -178,16 +177,18 @@ mod tests {
             qb_rho, t_val,
             "q_b(rho) must match sum_x of F(g_vec)"
         );
-    
+
         // 3) naive sumcheck of Q(b):
         let total_sum: BLSFr = q_b.z.iter().copied().sum();
-        let dimension_nu_l = (q_b.z.len() as f64).log2() as usize;
-    
+
         let mut q_b_clone = q_b.clone();
-        let sc_proof: SimpleSumcheckProof<BLSFr> =
-            SimpleSumcheck::prove(&mut q_b_clone, total_sum);
-        let ok = SimpleSumcheck::verify(&sc_proof, total_sum, dimension_nu_l);
+
+        let mut transcript = Transcript::new(b"test_sumcheck");
+        let (proof, _challenges)= SumCheckProof::<E>::simple_prover(&mut q_b_clone, total_sum, &mut transcript);
+
+        let mut verify_transcript = Transcript::new(b"test_sumcheck");
+        let ok = proof.simple_verify(total_sum, &mut verify_transcript);
         assert!(ok, "Naive sumcheck on q_b should pass as well");
     }
-    
+
 }
