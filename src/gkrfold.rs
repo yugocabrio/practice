@@ -195,7 +195,7 @@ fn create_sumfold_instance<G: Curve>(
         Arc::new(|vals: &[G::Fr]| vals[0] * vals[1]);
 
     SumfoldInstance {
-        f_func,
+        F_func: f_func,
         g_vec: vec![g0, g1],
     }
 }

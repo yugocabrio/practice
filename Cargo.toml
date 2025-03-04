@@ -23,8 +23,7 @@ ark-poly = {version = "0.2", default-features = false }
 ark-ec = {version = "0.2", default-features = false }
 ark-serialize = { version = "0.2", default-features = false, features = [ "derive" ] }
 ark-std = { version = "0.2", default-features = false }
-rayon = { version = "1", optional = true }
-
+rayon = { version = "1.7", optional = true }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.2", default-features = false, features = [ "curve" ] }

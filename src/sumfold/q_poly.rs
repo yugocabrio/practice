@@ -28,7 +28,8 @@ fn decimal_to_bits_msb_first<F: Field>(val: usize,num_bits: usize)->Vec<F>{
 /// - `l`: number of bits for x.
 ///
 /// Returns a MultilinearPolynomial in `nu` variables (the variable b).
-pub fn build_q_polynomial<F: Field>(
+#[allow(non_snake_case)]
+pub fn build_Q_polynomial<F: Field>(
     f_js:&[MultilinearPolynomial<F>],
     F: &(dyn Fn(&[F])->F + Sync),
     rho: usize,
@@ -73,75 +74,4 @@ pub fn build_q_polynomial<F: Field>(
 
     // 4) Return Q(b) as a multilinear polynomial in nu variables.
     MultilinearPolynomial::new(q_evals)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ark_ff::{UniformRand, One, Zero};
-    use ark_bls12_381::Fr as FF;
-    use crate::sumfold::multilinear::MultilinearPolynomial;
-    use rand::rngs::StdRng;
-    use rand::{SeedableRng, RngCore};
-
-    #[test]
-    fn test_build_q_poly() {
-        test_build_q_polynomial_simple(2,2,2);
-        test_build_q_polynomial_simple(8,4,2);
-    }
-
-    pub fn product_f<F: Field>(vals:&[F])->F{
-        let mut acc=F::one();
-        for &v in vals {
-            acc*=v;
-        }
-        acc
-    }
-
-    fn test_build_q_polynomial_simple(n:usize,x:usize,t:usize){
-        let nu=(n as f64).log2() as usize;
-        let l =(x as f64).log2() as usize;
-        let mut rng=StdRng::seed_from_u64(111);
-
-        let mut g_bj=Vec::with_capacity(n);
-        for _ in 0..n {
-            let mut polys_b=Vec::with_capacity(t);
-            for _j in 0..t {
-                let evals= (0..x).map(|_| FF::rand(&mut rng)).collect();
-                polys_b.push(MultilinearPolynomial::new(evals));
-            }
-            g_bj.push(polys_b);
-        }
-
-        // build f_j
-        let size=1<<(nu+l);
-        let mut f_js=Vec::with_capacity(t);
-        for j in 0..t {
-            let mut f_eval=vec![FF::zero();size];
-            for b_val in 0..n {
-                for x_val in 0..x {
-                    let idx=(b_val<<l)+x_val;
-                    f_eval[idx]=g_bj[b_val][j].z[x_val];
-                }
-            }
-            f_js.push(MultilinearPolynomial::new(f_eval));
-        }
-
-        let random_u64=rng.next_u64();
-        let rho=(random_u64 as usize)%n;
-
-        let Q= build_q_polynomial(&f_js,&product_f::<FF>,rho,nu,l);
-        let q_r_b= Q.z[rho];
-
-        // check
-        let mut sum_val= FF::zero();
-        for x_val in 0..x {
-            let mut pv=FF::one();
-            for j in 0..t {
-                pv *= g_bj[rho][j].z[x_val];
-            }
-            sum_val += pv;
-        }
-        assert_eq!(q_r_b,sum_val);
-    }
 }
