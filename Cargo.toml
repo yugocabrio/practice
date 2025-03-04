@@ -1,9 +1,9 @@
 [package]
 name = "zkp-libra"
 version = "0.1.0"
-authors = ["SECBIT Labs"]
+authors = ["GKRFold"]
 description = "a zero-knowledge proof scheme: libra."
-keywords = ["cryptography", "zkp", "zero-knowledge", "libra"]
+keywords = ["cryptography", "zkp", "zero-knowledge", "libra", "gkr", "sumcheck", "sumfold"]
 categories = ["cryptography"]
 license = "MIT/Apache-2.0"
 edition = "2018"

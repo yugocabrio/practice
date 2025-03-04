@@ -15,10 +15,6 @@ pub struct SumCheckProof<G: Curve> {
     pub poly_value_at_r: Vec<G::Fr>,
 }
 
-// 乗算についてのメモ
-// f_vcは レイヤーi+1のV_i+1(x)を並べたベクトル
-// mul_hg_vec はg_vec.0と等しく、これはmulの部分和 h_i+1(x)=Σ_y mul(z, x, y)V_i+1(y))
-
 impl<G: Curve> SumCheckProof<G> {
     pub fn phase_one_prover(
         f_vec: &Vec<G::Fr>,
@@ -45,7 +41,6 @@ impl<G: Curve> SumCheckProof<G> {
             size /= 2;
             let eval_0: G::Fr = (0..size)
                 .map(|j| {
-                    // 1番目の項がh_i+1(x)に対応？
                     f_vec[j] * &mul_hg_vec[j] + &(f_vec[j] * &add_hg_vec1[j]) + &add_hg_vec2[j]
                 })
                 .sum();
