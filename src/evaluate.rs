@@ -76,6 +76,8 @@ pub fn eval_value<G: Curve>(value: &Vec<G::Fr>, r: &Vec<G::Fr>) -> G::Fr {
 }
 
 // evaluate H_g(x) = \sum{ ~I(g, z) * ~f_1(g, x, y) * ~f_3(y)}
+// 第一フェーズ
+// initialize_phase_oneによって呼び出される
 pub fn eval_hg<G: Curve>(
     evals_g_vec: &Vec<G::Fr>,
     v_vec: &Vec<G::Fr>,
@@ -86,8 +88,10 @@ pub fn eval_hg<G: Curve>(
     let mut add_hg_vec1 = vec![G::Fr::zero(); (2usize).pow(bit_size as u32)];
     let mut add_hg_vec2 = vec![G::Fr::zero(); (2usize).pow(bit_size as u32)];
     for gate in gates.iter() {
-        if gate.op == 1 {
+        if gate.op == 1 { // op == 1がmultの時です
             let (g, x, y) = (gate.g, gate.left_node, gate.right_node);
+            // evals_g_vec[g]が multi_{i+1}(z,x,y)をchallengeで評価
+            // v_vec[y]が次のレイヤのノードyにおける値 V_{i+1}(y) に対応, yでy番目
             mul_hg_vec[x] += &(evals_g_vec[g] * &v_vec[y]);
         } else if gate.op == 0 {
             let (g, x, y) = (gate.g, gate.left_node, gate.right_node);
@@ -95,20 +99,29 @@ pub fn eval_hg<G: Curve>(
             add_hg_vec2[x] += &(evals_g_vec[g] * &v_vec[y]);
         }
     }
+    // mul_hg_vecがh_i+1(x)に該当する　Σ_y mult_i+1(z,x,y) V_i+1(y)
     (mul_hg_vec, add_hg_vec1, add_hg_vec2)
 }
 
+// 第二フェーズ
+// initialize_phase_twoによって呼び出される
 pub fn eval_fgu<G: Curve>(
     evals_g_vec: &Vec<G::Fr>,
     ru_vec: &Vec<G::Fr>,
     gates: &Vec<Gate>,
     bit_size: usize,
 ) -> (Vec<G::Fr>, Vec<G::Fr>) {
+    // まず、mul_hg_vecがh_i+1(x)に該当する　Σ_y mult_i+1(z,x,y) V_i+1(y)に該当する部分でした
+    // これはinitialize_phase_oneのeval_hgによって作られています
     let mut mul_hg_vec = vec![G::Fr::zero(); (2usize).pow(bit_size as u32)];
     let mut add_hg_vec = vec![G::Fr::zero(); (2usize).pow(bit_size as u32)];
     for gate in gates.iter() {
-        if gate.op == 1 {
+        if gate.op == 1 { // op == 1がmultの時です
             let (g, x, y) = (gate.g, gate.left_node, gate.right_node);
+            // evals_g_vec[g]はmulti_{i+1}(z,x,y)をchallengeで評価
+            // ru_vecはx番目のノードでのV_i+1(x)を乱数ベクトルで評価
+
+            // mul_hg_vec[y]=Σ_x[mult_i+1(z,x,y)*V_i+1(x)]（乱数評価含む）
             mul_hg_vec[y] += &(evals_g_vec[g] * &ru_vec[x]);
         } else if gate.op == 0 {
             let (g, x, y) = (gate.g, gate.left_node, gate.right_node);

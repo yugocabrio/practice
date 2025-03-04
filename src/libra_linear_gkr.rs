@@ -217,6 +217,8 @@ pub fn initialize_phase_one<G: Curve>(
         .map(|i| alpha * &evals_gu_vec[i] + &(beta * &evals_gv_vec[i]))
         .collect::<Vec<_>>();
 
+    // ここでeval_hgを呼び出している
+    // eval_hgで書いたようにmul_hg_vecは既にh_i+1(x)=Σ_y mult_i+1(z,x,y) V_i+1(y)に該当する
     let (mul_hg_vec, add_hg_vec1, add_hg_vec2) = eval_hg::<G>(&evals_g_vec, v_vec, gates, bit_size);
 
     (mul_hg_vec, add_hg_vec1, add_hg_vec2)

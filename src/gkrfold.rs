@@ -89,6 +89,12 @@ pub fn gkrfold<G: Curve>(
 
             // Create 3 SumFoldInstances for phase one
             // 1. For mul_hg_vec
+            // バグの原因
+            // 本来ならg0*g1がh_i+1=Σ_y multt_i+1(x,y,z) V_i+1(y)
+            // mul_hg_vecが既にh_i+1に相当してしまっている
+
+            // 僕が思うに、その1
+            // evals_g_vec[g](mult_i+1(z,x,y)), v_vec[y] (V_{i+1}(y))
             let mul_hg_instance = create_sumfold_instance::<G>(&evals[d-1], &mul_hg_vec);
             sumfold_instances.push(mul_hg_instance);
 
@@ -123,6 +129,9 @@ pub fn gkrfold<G: Curve>(
 
             // Create 3 SumFoldInstances for phase two
             // 4. For mul_hg_vec in phase two
+
+            // 僕が思うに
+            // mul_hg_instance(h_i+1),　ru_vec (V_i+1(x))
             let mul_hg_instance2 = create_sumfold_instance::<G>(&evals[d-1], &mul_hg_vec);
             sumfold_instances.push(mul_hg_instance2);
 
