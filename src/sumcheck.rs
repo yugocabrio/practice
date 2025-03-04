@@ -238,8 +238,8 @@ impl<G: Curve> SumCheckProof<G> {
 
 
         for (_, poly) in self.polys.iter().enumerate() {
-            // 線形多項式（1次多項式）であるか確認
-            if poly.degree() != 1 {
+            // 最高次数が1次か
+            if poly.degree() > 1 {
                 return false;
             }
 
