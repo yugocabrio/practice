@@ -244,6 +244,8 @@ pub fn initialize_phase_two<G: Curve>(
         .map(|i| alpha * &evals_gu_vec[i] + &(beta * &evals_gv_vec[i]))
         .collect::<Vec<_>>();
 
+    // ここでeval_fguを呼び出している
+    // eval_fguで書いたようにmul_hg_vecはmul_hg_vec[y]=Σ_x[mult_i+1(z,x,y)*V_i+1(x)]に該当する
     let (mul_hg_vec, add_hg_vec) = eval_fgu::<G>(&evals_g_vec, &evals_ru_vec, gates, bit_size);
     (mul_hg_vec, add_hg_vec, eval_ru)
 }
