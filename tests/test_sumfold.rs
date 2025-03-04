@@ -194,3 +194,80 @@ fn test_sumfold_correctness() {
     }
   }
 }
+
+#[test]
+fn test_sumfold_soundness() {
+  // n: num of instances
+  let ns = [2, 4, 8, 16];
+  // l: num of bits for g polynomial
+  let ls = [2, 4, 8, 16];
+  let num_tries = 10;
+
+  for &n in &ns {
+    for &l in &ls {
+      for t in 0..num_tries {
+        println!("test_sumfold n={} l={} t={}",n,l,t);
+        let mut rng=StdRng::seed_from_u64(123);
+
+        // define F as product
+        let f_arc: Arc<dyn Fn(&[BLSFr])->BLSFr + Send + Sync> =
+            Arc::new(|vals: &[BLSFr]| vals.iter().product());
+
+        // build 2 instances
+        let mut instances = Vec::with_capacity(n);
+        for _ in 0..n {
+            // build g0,g1
+            let g0= build_random_poly(l, &mut rng);
+            let g1= build_random_poly(l, &mut rng);
+            // store
+            let inst = SumfoldInstance {
+                F_func: f_arc.clone(),
+                g_vec: vec![g0, g1],
+            };
+            instances.push(inst);
+        }
+
+        // call sumfold
+        let (chosen_inst, rho_field, q_b) = sumfold::<E>(instances);
+
+        // 1) compute the actual sum_x F(g0(x), g1(x)) for chosen_inst
+        let size = chosen_inst.g_vec[0].len();
+        let mut t_val = BLSFr::zero();
+        for i in 0..size {
+            let val = (chosen_inst.F_func)(&[
+                chosen_inst.g_vec[0].z[i],
+                chosen_inst.g_vec[1].z[i],
+            ]);
+            t_val += val;
+        }
+
+        // 2) check Q(rho) != invalid sum
+        let rho_usize = (rho_field.into_repr().as_ref()[0]) as usize;
+        let qb_rho = q_b.z[rho_usize];
+        for sigma in 1..11 {
+          assert!(
+            qb_rho != (t_val + BLSFr::from(sigma as u64)),
+            "q_b(rho) must not match invalid sum"
+          );
+
+          assert!(
+            qb_rho != (t_val - BLSFr::from(sigma as u64)),
+            "q_b(rho) must not match invalid sum"
+          );
+        }
+
+        // 3) naive sumcheck of Q(b):
+        let total_sum: BLSFr = q_b.z.iter().copied().sum();
+
+        let mut q_b_clone = q_b.clone();
+
+        let mut transcript = Transcript::new(b"test_sumcheck");
+        let (proof, _challenges)= SumCheckProof::<E>::prove(&mut q_b_clone, total_sum, &mut transcript);
+
+        let mut verify_transcript = Transcript::new(b"test_sumcheck");
+        let ok = proof.verify(BLSFr::zero(), &mut verify_transcript);
+        assert!(!ok, "Should not pass with invalid sum");
+      }
+    }
+  }
+}
