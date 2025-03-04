@@ -1,10 +1,11 @@
-use ark_ff::Zero;
 use rand::Rng;
 use zkp_curve::Curve;
 use std::sync::Arc;
 
 use crate::sumfold::multilinear::MultilinearPolynomial;
 use crate::sumfold::q_poly::build_Q_polynomial;
+
+use super::fj_poly::build_fj_polynomial;
 
 #[allow(non_snake_case)]
 #[derive(Clone)]
@@ -21,11 +22,10 @@ pub struct SumfoldInstance<G: Curve> {
 /// 1. F = instances[0].f_func
 /// 2. Ensure all g_vec have the same length.
 /// 3. Define n, t, x, etc.
-/// 4. Prepare g_bj from instances.
-/// 5. Prepare f_js from g_bj.
-/// 6. Pick a random rho in [0..n).
-/// 7. Call build_q_polynomial.
-/// 8. Return (chosen_instance, rho_field, q_b).
+/// 4. Prepare f_js from g_bj.
+/// 5. Pick random rho in [0..n).
+/// 6. Call build_Q_polynomial.
+/// 7. Return.
 ///
 /// Output type: (SumfoldInstance<G>, G::Fr, MultilinearPolynomial<G::Fr>)
 #[allow(non_snake_case)]
@@ -62,38 +62,25 @@ pub fn sumfold<G: Curve>(
     let nu = (n_pow2 as f64).log2() as usize;
     let l  = (x_pow2 as f64).log2() as usize;
 
-    // Step 4: Prepare g_bj from instances
-    let mut g_bj = Vec::with_capacity(n);
-    for inst in &instances {
-        g_bj.push(inst.g_vec.clone());
-    }
+    // Step 4: Prepare f_js from g_bj
+    let gs: Vec<Vec<_>> = (0..t)
+        .map(|j| instances.iter().map(|inst| inst.g_vec[j].clone()).collect())
+        .collect();
 
-    // Step 5: Prepare f_js from g_bj
-    let size = 1 << (nu + l);
-    let mut f_js = Vec::with_capacity(t);
-    // index = (b_val << l) + x_val
-    for j in 0..t {
-        let mut f_eval = vec![<G as Curve>::Fr::zero(); size];
-        for b_val in 0..n {
-            for x_val in 0..x {
-                let idx = (b_val << l) + x_val;
-                if idx < size {
-                    f_eval[idx] = g_bj[b_val][j].z[x_val];
-                }
-            }
-        }
-        f_js.push(MultilinearPolynomial::new(f_eval));
-    }
+    assert_eq!(gs.len(), t, "gs must have t elements");
 
-    // Step 6: pick random rho in [0..n)
+    let f_js: Vec<_> = gs.iter().map(|gs_for_j| build_fj_polynomial(gs_for_j)).collect();
+
+
+    // Step 5: pick random rho in [0..n)
     let mut rng = rand::thread_rng();
     let rho_int = rng.gen_range(0, n); // for rand >= 0.7, use two-arg version e.g. rng.gen_range(0..n)
     let rho_field = <G as Curve>::Fr::from(rho_int as u64);
 
-    // Step 7: call build_q_polynomial
+    // Step 6: call build_q_polynomial
     let Q_b = build_Q_polynomial(&f_js, &*f_cloned, rho_int, nu, l);
 
-    // Step 8: return
+    // Step 7: return
     (
         instances[rho_int].clone(),
         rho_field,
