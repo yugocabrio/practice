@@ -100,7 +100,7 @@ pub fn gkrfold_mul_only<G: Curve>(
 
             // Make instance for phase1
             sumfold_instances.push(
-                create_sumfold_instance_phase1::<G>(&mul_hg_vec_padded)
+                create_sumfold_instance_phase::<G>(&mul_hg_vec_padded)
             );
 
             // random ru
@@ -124,7 +124,7 @@ pub fn gkrfold_mul_only<G: Curve>(
 
             // sumfold instance for phase2
             sumfold_instances.push(
-                create_sumfold_instance_phase1::<G>(&mul_hg2_padded)
+                create_sumfold_instance_phase::<G>(&mul_hg2_padded)
             );
 
             // random rv
@@ -220,7 +220,7 @@ fn dummy_sumfold_instance<G: Curve>(new_len: usize) -> SumfoldInstance<G> {
 }
 
 /// Phase1 sumfold => g0= mul_hg_vec, g1= 1 array => but we only keep mul_hg_vec
-fn create_sumfold_instance_phase1<G: Curve>(poly: &Vec<G::Fr>) -> SumfoldInstance<G> {
+fn create_sumfold_instance_phase<G: Curve>(poly: &Vec<G::Fr>) -> SumfoldInstance<G> {
     let g0 = MultilinearPolynomial::new(poly.clone());
     let ones = vec![G::Fr::one(); poly.len()];
     let g1 = MultilinearPolynomial::new(ones);
