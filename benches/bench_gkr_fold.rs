@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::Write;
 use std::time::Instant;
 use zkp_libra::{
-    circuit::Circuit, gkrfold::gkrfold, libra_linear_gkr::LinearGKRProof,
+    circuit::Circuit, gkrfold::gkrfold_mul_only, libra_linear_gkr::LinearGKRProof,
 };
 
 /// Generate a circuit with d layers
@@ -127,7 +127,7 @@ fn run_benchmark(n: usize, d: usize) -> (
     // Measure gkrfold time and memory usage
     let memory_before = measure_peak_memory();
     let start = Instant::now();
-    let folded_proof = gkrfold::<E>(
+    let folded_proof = gkrfold_mul_only::<E>(
         circuit_refs,
         input_refs,
         all_witnesses.clone(),
