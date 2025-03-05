@@ -3,7 +3,7 @@ use ark_ff::One;
 use std::time::Instant;
 
 use zkp_libra::{
-    circuit::Circuit, gkrfold::gkrfold, libra_linear_gkr::LinearGKRProof,
+    circuit::Circuit, gkrfold::gkrfold_mul_only, libra_linear_gkr::LinearGKRProof,
 };
 
 /// Create a simple circuit for testing
@@ -134,7 +134,7 @@ fn test_gkrfold() {
     println!("Circuit 2 output: {:?}", output2);
 
     // Now use GKRFold to compress the proofs
-    let folded_proof = gkrfold::<E>(
+    let folded_proof = gkrfold_mul_only::<E>(
         vec![&circuit1, &circuit2],
         vec![&inputs1, &inputs2],
         vec![witnesses1.clone(), witnesses2.clone()],
@@ -239,7 +239,7 @@ fn test_gkrfold_with_n_circuits(n: usize) {
     let input_refs: Vec<&Vec<Fr>> = all_inputs.iter().collect();
 
     // Use GKRFold to compress the proofs
-    let folded_proof = gkrfold::<E>(
+    let folded_proof = gkrfold_mul_only::<E>(
         circuit_refs,
         input_refs,
         all_witnesses.clone(),
@@ -281,7 +281,7 @@ fn test_gkrfold_poseidon() {
     println!("Poseidon Circuit 2 output: {:?}", output2);
 
     // Now use GKRFold to compress the proofs
-    let folded_proof = gkrfold::<E>(
+    let folded_proof = gkrfold_mul_only::<E>(
         vec![&circuit1, &circuit2],
         vec![&inputs1, &inputs2],
         vec![witnesses1.clone(), witnesses2.clone()],
